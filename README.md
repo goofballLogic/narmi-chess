@@ -1,3 +1,10 @@
+## tl;dr
+
+1. Install dependencies noted in https://rustwasm.github.io/book/game-of-life/introduction.html
+2. Run `wasm-pack build` to produce the `pkg` folder
+3. Install js dependencies by navigating into `www` and doing an `npm install`
+4. Run dev server using `npm run start`
+
 <div align="center">
 
   <h1><code>wasm-pack-template</code></h1>
