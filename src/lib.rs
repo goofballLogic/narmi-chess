@@ -44,6 +44,7 @@ pub struct Position {
 }
 
 #[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Game {
     positions: Vec<Position>,
     is_white_move: bool,
@@ -53,7 +54,7 @@ pub struct Game {
 #[wasm_bindgen]
 impl Game {
 
-    pub fn new() {
+    pub fn new() -> Game {
         Game {
             is_white_move: true,
             state: GameState::NotStarted,
