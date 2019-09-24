@@ -9,5 +9,5 @@ console.log(game.is_white_move());
 const positionsPointer = game.positions();
 const positions = new Uint8Array(memory.buffer, positionsPointer, 3 * 16); // not sure how many positions we have???
 console.log(positions);
-
-console.log("test");
+let example = wasm.send_example_to_js();
+console.log(example);

@@ -1,6 +1,10 @@
 mod utils;
 
+use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
+
+#[macro_use]
+extern crate serde_derive;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -19,7 +23,7 @@ pub enum Piece {
     Bishop = 4,
     Queen = 5,
     King = 6,
-    IsWhite = 8
+    IsWhite = 8,
 }
 
 #[wasm_bindgen]
@@ -32,15 +36,16 @@ pub enum GameState {
     WhiteResigned = 3,
     BlackResigned = 4,
     WhiteCheckmate = 5,
-    BlackCheckmate = 6
+    BlackCheckmate = 6,
 }
 
 #[wasm_bindgen]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+
 pub struct Position {
     rank: u8,
     file: u8,
-    piece: Piece
+    piece: Piece,
 }
 
 #[wasm_bindgen]
@@ -48,21 +53,21 @@ pub struct Position {
 pub struct Game {
     positions: Vec<Position>,
     is_white_move: bool,
-    state: GameState
+    state: GameState,
 }
 
 #[wasm_bindgen]
 impl Game {
-
     pub fn new() -> Game {
         Game {
             is_white_move: true,
             state: GameState::NotStarted,
-            positions: [ Position {
+            positions: [Position {
                 rank: 0,
                 file: 0,
-                piece: Piece::Rook
-            } ].to_vec()
+                piece: Piece::Rook,
+            }]
+            .to_vec(),
         }
     }
 
@@ -78,7 +83,7 @@ impl Game {
 }
 
 #[wasm_bindgen]
-extern {
+extern "C" {
     fn alert(s: &str);
     #[wasm_bindgen(js_namespace = console, js_name = log)]
     fn console_log(s: &str);
@@ -88,6 +93,25 @@ extern {
 
 #[wasm_bindgen]
 pub fn greet(name: &str) {
-
     console_log(&format_args!("Hello {} at {}", name, date_now()).to_string());
+}
+
+#[derive(Serialize)]
+pub struct Example {
+    pub field1: HashMap<u32, String>,
+    pub field2: Vec<Vec<f32>>,
+    pub field3: [f32; 4],
+}
+
+#[wasm_bindgen]
+pub fn send_example_to_js() -> JsValue {
+    let mut field1 = HashMap::new();
+    field1.insert(0, String::from("ex"));
+    let example = Example {
+        field1,
+        field2: vec![vec![1., 2.], vec![3., 4.]],
+        field3: [1., 2., 3., 4.],
+    };
+
+    JsValue::from_serde(&example).unwrap()
 }
