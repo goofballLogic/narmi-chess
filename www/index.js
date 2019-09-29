@@ -1,5 +1,7 @@
 import * as wasm from "narmi-chess";
 
+console.log(wasm);
+
 console.log("Creating a new game");
 const game = wasm.Game.new();
 console.log(game);
