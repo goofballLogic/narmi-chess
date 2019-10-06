@@ -40,3 +40,6 @@ game.positions().forEach(({ rank, file, piece_type, is_white}) => {
     findSquare(rank, file).innerText = pieceGlyphs[glyphIndex];
 });
 
+let moves = [];
+const attempt = wasm.make_move(moves, "a3");
+console.log(attempt);
