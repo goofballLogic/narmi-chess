@@ -1,7 +1,14 @@
-mod utils;
+#[macro_use]
+extern crate serde_derive;
 
+<<<<<<< HEAD
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
+=======
+pub mod game;
+
+//use wasm_bindgen::prelude::*;
+>>>>>>> 107fc245d21674e341dda618c2cfa56cce4c0ed6
 
 #[macro_use]
 extern crate serde_derive;
@@ -12,6 +19,7 @@ extern crate serde_derive;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+<<<<<<< HEAD
 #[wasm_bindgen]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -115,3 +123,5 @@ pub fn send_example_to_js() -> JsValue {
 
     JsValue::from_serde(&example).unwrap()
 }
+=======
+>>>>>>> 107fc245d21674e341dda618c2cfa56cce4c0ed6

@@ -3,6 +3,28 @@
   <head>
     <meta charset="utf-8">
     <title>Hello wasm-pack!</title>
+    <style>
+      body {
+        padding: 40px;
+      }
+      .board {
+        display: flex;
+        flex-wrap: wrap;
+        max-width: 400px;
+        border: brown 10px groove;
+      }
+      .board div {
+        height: 50px;
+        width: 50px;
+        font-size: 40px;
+        line-height: 50px;
+        text-align: center;
+      }
+      .board div.black {
+        background-color: #EEE;
+      }
+
+    </style>
   </head>
   <body>
     <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
