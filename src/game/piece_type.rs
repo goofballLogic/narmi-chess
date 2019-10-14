@@ -1,8 +1,3 @@
-use wasm_bindgen::prelude::*;
-
-#[wasm_bindgen]
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum PieceType {
     Empty = 0,
     King = 1,

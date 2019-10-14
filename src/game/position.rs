@@ -1,10 +1,6 @@
-use wasm_bindgen::prelude::*;
 use super::piece_type::*;
 use std::vec::*;
 
-
-#[wasm_bindgen]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub struct Position {
     pub rank: u8,
     pub file: u8,
@@ -54,5 +50,5 @@ pub fn calculate_positions(_moves: Vec<String>) -> Vec<Position> {
         Position { rank: 7, file: 7, piece_type: PieceType::Rook, is_white: true },
 
     ]
-    .to_vec()
+
 }

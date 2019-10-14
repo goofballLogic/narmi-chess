@@ -1,5 +1,7 @@
 use super::game::*;
 
+//use super::rules::*;
+
 pub struct MoveError {
     reason: String
 }
