@@ -1,3 +1,4 @@
+#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
 pub enum PieceType {
     Empty = 0,
     King = 1,
