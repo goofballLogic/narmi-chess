@@ -47,14 +47,16 @@ const INITIAL_POSITIONS: [Position; 32] = [
     Position { rank: 7, file: 7, piece_type: PieceType::Rook, is_white: true },
 ];
 
-// Given an array of moves, calculates an array of positions to be rendered
-pub fn calculate_positions(_moves: Vec<String>) -> Vec<Position> {
+pub fn calculate_next_positions(prior_positions: Vec<Position>, next_move: &String) -> Vec<Position> {
+    println!("{}", next_move);
+    prior_positions
+}
 
-    // not yet implemented - just returns the initial game layout!
-    let mut positions = INITIAL_POSITIONS.to_vec();
+// Given an array of moves, calculates an array of positions to be rendered
+pub fn calculate_positions(moves: Vec<String>) -> Vec<Position> {
+    let mut positions = moves.iter().fold(INITIAL_POSITIONS.to_vec(), calculate_next_positions); //| acc, x | calculate_next_positions(acc, &x));
     positions.sort();
     positions
-
 }
 
 #[cfg(test)]
