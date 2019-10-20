@@ -69,7 +69,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected="Missing file")]
-    fn notation_less_than_two_characters_long_should_throw() {
+    fn notation_less_than_two_characters_long_should_panic() {
         decode("4".to_string());
     }
 
@@ -77,19 +77,19 @@ mod tests {
 
     #[test]
     #[should_panic(expected="Invalid rank q")]
-    fn non_number_rank_should_throw() {
+    fn non_number_rank_should_panic() {
         decode("q".to_string());
     }
 
     #[test]
     #[should_panic(expected="Invalid rank 9")]
-    fn rank_greater_than_8_should_throw() {
+    fn rank_greater_than_8_should_panic() {
         decode("9".to_string());
     }
 
     #[test]
     #[should_panic(expected="Invalid rank 0")]
-    fn rank_less_than_1_should_throw() {
+    fn rank_less_than_1_should_panic() {
         decode("0".to_string());
     }
 
@@ -97,19 +97,19 @@ mod tests {
 
     #[test]
     #[should_panic(expected="Invalid file !")]
-    fn non_alpha_file_should_throw() {
+    fn non_alpha_file_should_panic() {
         decode("!4".to_string());
     }
 
     #[test]
     #[should_panic(expected="Invalid file 9")]
-    fn file_less_than_a_should_throw() {
+    fn file_less_than_a_should_panic() {
         decode("94".to_string());
     }
 
     #[test]
     #[should_panic(expected="Invalid file i")]
-    fn file_more_than_h_should_throw() {
+    fn file_more_than_h_should_panic() {
         decode("i4".to_string());
     }
 
