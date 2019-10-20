@@ -68,63 +68,49 @@ mod tests {
     use super::*;
 
     #[test]
+    #[should_panic(expected="Missing file")]
     fn notation_less_than_two_characters_long_should_throw() {
-        let notation = "4";
-        let actual = std::panic::catch_unwind(|| decode(notation.to_string()));
-        let err = *(actual.unwrap_err().downcast::<String>().unwrap());
-        assert!(err.contains("Missing file"));
+        decode("4".to_string());
     }
 
     // rank tests
 
     #[test]
+    #[should_panic(expected="Invalid rank q")]
     fn non_number_rank_should_throw() {
-        let notation = "q";
-        let actual = std::panic::catch_unwind(|| decode(notation.to_string()));
-        let err = *(actual.unwrap_err().downcast::<String>().unwrap());
-        assert!(err.contains("Invalid rank q"));
+        decode("q".to_string());
     }
 
     #[test]
+    #[should_panic(expected="Invalid rank 9")]
     fn rank_greater_than_8_should_throw() {
-        let notation = "9";
-        let actual = std::panic::catch_unwind(|| decode(notation.to_string()));
-        let err = *(actual.unwrap_err().downcast::<String>().unwrap());
-        assert!(err.contains("Invalid rank 9"));
+        decode("9".to_string());
     }
 
     #[test]
+    #[should_panic(expected="Invalid rank 0")]
     fn rank_less_than_1_should_throw() {
-        let notation = "0";
-        let actual = std::panic::catch_unwind(|| decode(notation.to_string()));
-        let err = *(actual.unwrap_err().downcast::<String>().unwrap());
-        assert!(err.contains("Invalid rank 0"));
+        decode("0".to_string());
     }
 
     // file tests
 
     #[test]
+    #[should_panic(expected="Invalid file !")]
     fn non_alpha_file_should_throw() {
-        let notation = "!4";
-        let actual = std::panic::catch_unwind(|| decode(notation.to_string()));
-        let err = *(actual.unwrap_err().downcast::<String>().unwrap());
-        assert!(err.contains("Invalid file !"));
+        decode("!4".to_string());
     }
 
     #[test]
+    #[should_panic(expected="Invalid file 9")]
     fn file_less_than_a_should_throw() {
-        let notation = "94";
-        let actual = std::panic::catch_unwind(|| decode(notation.to_string()));
-        let err = *(actual.unwrap_err().downcast::<String>().unwrap());
-        assert!(err.contains("Invalid file 9"));
+        decode("94".to_string());
     }
 
     #[test]
+    #[should_panic(expected="Invalid file i")]
     fn file_more_than_h_should_throw() {
-        let notation = "i4";
-        let actual = std::panic::catch_unwind(|| decode(notation.to_string()));
-        let err = *(actual.unwrap_err().downcast::<String>().unwrap());
-        assert!(err.contains("Invalid file i"));
+        decode("i4".to_string());
     }
 
     #[test]
