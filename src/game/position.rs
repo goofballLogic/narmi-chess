@@ -1,4 +1,5 @@
 use super::piece_type::*;
+use super::notation::*;
 use std::vec::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -54,7 +55,7 @@ pub fn calculate_next_positions(prior_positions: Vec<Position>, next_move: &Stri
 
 // Given an array of moves, calculates an array of positions to be rendered
 pub fn calculate_positions(moves: Vec<String>) -> Vec<Position> {
-    let mut positions = moves.iter().fold(INITIAL_POSITIONS.to_vec(), calculate_next_positions); //| acc, x | calculate_next_positions(acc, &x));
+    let mut positions = moves.iter().fold(INITIAL_POSITIONS.to_vec(), calculate_next_positions);
     positions.sort();
     positions
 }
@@ -64,21 +65,21 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn a_single_move() {
-        let moves = vec!["e4".to_string()];
+    // #[test]
+    // fn a_single_move() {
+    //     let moves = vec!["e4".to_string()];
 
-        let mut expected = INITIAL_POSITIONS.to_vec();
-        let mut moving_piece = expected
-            .iter_mut()
-            .find(|position| (**position).rank == 1 && (**position).file == 4)
-            .unwrap();
-        moving_piece.rank = 3;
-        expected.sort();
+    //     let mut expected = INITIAL_POSITIONS.to_vec();
+    //     let mut moving_piece = expected
+    //         .iter_mut()
+    //         .find(|position| (**position).rank == 1 && (**position).file == 4)
+    //         .unwrap();
+    //     moving_piece.rank = 3;
+    //     expected.sort();
 
-        let actual = calculate_positions(moves);
+    //     let actual = calculate_positions(moves);
 
-        assert_eq!(expected, actual);
+    //     assert_eq!(expected, actual);
 
-    }
+    // }
 }
