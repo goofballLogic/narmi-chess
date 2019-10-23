@@ -124,4 +124,28 @@ mod tests {
         let actual = decode(notation.to_string());
         assert_eq!(expected, actual);
     }
+
+    #[test]
+    fn translate_rank_and_file_upper_bounds() {
+        let notation = "h8";
+        let expected = Notation {
+            text: notation.to_string(),
+            rank: 7,
+            file: 7
+        };
+        let actual = decode(notation.to_string());
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn translate_rank_and_file_lower_bounds() {
+        let notation = "a1";
+        let expected = Notation {
+            text: notation.to_string(),
+            rank: 0,
+            file: 0
+        };
+        let actual = decode(notation.to_string());
+        assert_eq!(expected, actual);
+    }
 }
