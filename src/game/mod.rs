@@ -4,3 +4,4 @@ pub mod moving;
 pub mod piece_type;
 pub mod position;
 pub mod rules;
+pub mod notation;
