@@ -1,8 +1,11 @@
+use super::piece_type::*;
+
 #[derive(Debug, PartialEq)]
 pub struct Notation {
     text: String,
     rank: u8,
-    file: u8
+    file: u8,
+    piece_type: PieceType,
 }
 
 fn decode_coordinate(notation: &str, reverse_index: usize, parse_radix: u32, parse_offset: u32, coordinate_name: &str, valid_range: &str) -> u8 {
@@ -51,14 +54,32 @@ fn decode_file(notation: &str) -> u8 {
     decode_coordinate(notation, 1, 18, 10, "file", "a..h")
 }
 
+fn decode_piecetype(notation: &str) -> PieceType {
+
+    let invalid = | what: &str | panic!("Invalid piece {} in move notation: {}. Must be none, K, Q, R, B or N", what, notation);
+    match notation.chars().rev().nth(2) {
+        None => PieceType::Pawn,
+        Some(x) => match x {
+            'K' => PieceType::King,
+            'Q' => PieceType::Queen,
+            'B' => PieceType::Bishop,
+            'R' => PieceType::Rook,
+            'N' => PieceType::Knight,
+            _ => invalid(&x.to_string())
+        }
+    }
+}
+
 pub fn decode(notation: String) -> Notation {
     // todo: validate notation only contains low-value utf-8 characters
     let rank = decode_rank(&notation);
     let file = decode_file(&notation);
+    let piece_type = decode_piecetype(&notation);
     Notation {
         text: notation.to_string(),
         rank: rank,
-        file: file
+        file: file,
+        piece_type: piece_type
     }
 }
 
@@ -119,7 +140,8 @@ mod tests {
         let expected = Notation {
             text: notation.to_string(),
             rank: 3,
-            file: 4
+            file: 4,
+            piece_type: PieceType::Pawn
         };
         let actual = decode(notation.to_string());
         assert_eq!(expected, actual);
@@ -131,7 +153,8 @@ mod tests {
         let expected = Notation {
             text: notation.to_string(),
             rank: 7,
-            file: 7
+            file: 7,
+            piece_type: PieceType::Pawn
         };
         let actual = decode(notation.to_string());
         assert_eq!(expected, actual);
@@ -143,9 +166,31 @@ mod tests {
         let expected = Notation {
             text: notation.to_string(),
             rank: 0,
-            file: 0
+            file: 0,
+            piece_type: PieceType::Pawn
         };
         let actual = decode(notation.to_string());
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn when_not_specified_piece_is_assumed_to_be_a_pawn() {
+        let notation = "a1";
+        let actual = decode(notation.to_string());
+        assert_eq!(actual.piece_type, PieceType::Pawn);
+    }
+
+    #[test]
+    fn when_specified_piece_it_maps_correctly() {
+        for (notation, piece_type) in [
+            ("Ka1", PieceType::King),
+            ("Qa1", PieceType::Queen),
+            ("Ra1", PieceType::Rook),
+            ("Ba1", PieceType::Bishop),
+            ("Na1", PieceType::Knight)
+        ].iter() {
+            let actual = decode(notation.to_string());
+            assert_eq!(actual.piece_type, *piece_type);
+        }
     }
 }
