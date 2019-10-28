@@ -1,8 +1,12 @@
+use super::piece_type::*;
+
 #[derive(Debug, PartialEq)]
 pub struct Notation {
     text: String,
     rank: u8,
-    file: u8
+    file: u8,
+    piece_type: PieceType,
+    capture: bool
 }
 
 fn decode_coordinate(notation: &str, reverse_index: usize, parse_radix: u32, parse_offset: u32, coordinate_name: &str, valid_range: &str) -> u8 {
@@ -51,14 +55,53 @@ fn decode_file(notation: &str) -> u8 {
     decode_coordinate(notation, 1, 18, 10, "file", "a..h")
 }
 
+fn decode_piecetype_character(notation: &str, piecetype_character: char) -> PieceType{
+    match piecetype_character {
+        'K' => PieceType::King,
+        'Q' => PieceType::Queen,
+        'B' => PieceType::Bishop,
+        'R' => PieceType::Rook,
+        'N' => PieceType::Knight,
+        _ => panic!("Invalid piece {} in move notation: {}. Must be none, K, Q, R, B or N", piecetype_character, notation)
+    }
+}
+
+fn decode_piecetype(notation: &str) -> PieceType {
+    let mut chars = notation.chars().rev();
+    match chars.nth(2) {
+        None => PieceType::Pawn,
+        Some(x) => match x {
+            'x' => match chars.nth(0) {
+                None => panic!("Missing piece indicator in capture move notation: {}", notation),
+                Some(y) => decode_piecetype_character(notation, y)
+            },
+            _ => decode_piecetype_character(notation, x)
+        }
+    }
+}
+
+fn decode_capture(notation: &str) -> bool {
+    match notation.chars().rev().nth(2) {
+        None => false,
+        Some(x) => match x {
+            'x' => true,
+            _ => false
+        }
+    }
+}
+
 pub fn decode(notation: String) -> Notation {
     // todo: validate notation only contains low-value utf-8 characters
     let rank = decode_rank(&notation);
     let file = decode_file(&notation);
+    let piece_type = decode_piecetype(&notation);
+    let capture = decode_capture(&notation);
     Notation {
         text: notation.to_string(),
         rank: rank,
-        file: file
+        file: file,
+        piece_type: piece_type,
+        capture: capture
     }
 }
 
@@ -66,6 +109,18 @@ pub fn decode(notation: String) -> Notation {
 mod tests {
 
     use super::*;
+
+    fn build_expected(mutation: impl Fn(&mut Notation)) -> Notation {
+        let mut result = Notation {
+            text: "a1".to_string(),
+            file: 0,
+            rank: 0,
+            piece_type: PieceType::Pawn,
+            capture: false
+        };
+        mutation(&mut result);
+        result
+    }
 
     #[test]
     #[should_panic(expected="Missing file")]
@@ -116,11 +171,13 @@ mod tests {
     #[test]
     fn translate_rank_and_file() {
         let notation = "e4";
-        let expected = Notation {
-            text: notation.to_string(),
-            rank: 3,
-            file: 4
-        };
+        let expected = build_expected(|x| {
+            x.text = notation.to_string();
+            x.rank = 3;
+            x.file = 4;
+            x.piece_type = PieceType::Pawn;
+        });
+
         let actual = decode(notation.to_string());
         assert_eq!(expected, actual);
     }
@@ -128,11 +185,12 @@ mod tests {
     #[test]
     fn translate_rank_and_file_upper_bounds() {
         let notation = "h8";
-        let expected = Notation {
-            text: notation.to_string(),
-            rank: 7,
-            file: 7
-        };
+        let expected = build_expected(|mut x| {
+            x.text = notation.to_string();
+            x.rank = 7;
+            x.file = 7;
+            x.piece_type = PieceType::Pawn;
+        });
         let actual = decode(notation.to_string());
         assert_eq!(expected, actual);
     }
@@ -140,12 +198,46 @@ mod tests {
     #[test]
     fn translate_rank_and_file_lower_bounds() {
         let notation = "a1";
-        let expected = Notation {
-            text: notation.to_string(),
-            rank: 0,
-            file: 0
-        };
+        let expected = build_expected(|mut x| {
+            x.text = notation.to_string();
+            x.rank = 0;
+            x.file = 0;
+            x.piece_type = PieceType::Pawn;
+        });
         let actual = decode(notation.to_string());
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn when_not_specified_piece_is_assumed_to_be_a_pawn() {
+        let notation = "a1";
+        let actual = decode(notation.to_string());
+        assert_eq!(actual.piece_type, PieceType::Pawn);
+    }
+
+    #[test]
+    fn when_specified_piece_it_maps_correctly() {
+        for (notation, piece_type) in [
+            ("Ka1", PieceType::King),
+            ("Qa1", PieceType::Queen),
+            ("Ra1", PieceType::Rook),
+            ("Ba1", PieceType::Bishop),
+            ("Na1", PieceType::Knight)
+        ].iter() {
+            let actual = decode(notation.to_string());
+            assert_eq!(actual.piece_type, *piece_type);
+        }
+    }
+
+    #[test]
+    fn when_a_capture_symbol_is_used_for_a_named_piece() {
+        let notation = "Kxa1";
+        let expected = build_expected(|mut x| {
+            x.text = notation.to_string();
+            x.piece_type = PieceType::King;
+            x.capture = true;
+        });
+        let actual = decode(notation.to_string());
+        assert_eq!(actual, expected);
     }
 }
