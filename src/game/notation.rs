@@ -6,7 +6,24 @@ pub struct Notation {
     rank: u8,
     file: u8,
     piece_type: PieceType,
-    capture: bool
+    capture: bool,
+    pawn_capture_source_file: u8,
+}
+
+/*
+    Try to parse the character to 0..7
+        If it's a rank (a..h) then we'll want to treat it as base 18 (0..h) and subtract 10
+        If it's a file (1..8) then we'll want to treat it as base 10 (0..9) and subtract 1
+*/
+fn parse_coordinate(c: char, parse_radix: u32, parse_offset: u32) -> Option<u8> {
+    let digit = c.to_digit(parse_radix)?; // will return None if this wasn't a digit
+    // is it out of range?
+    if (digit < parse_offset) || (digit > parse_offset + 7) {
+        None
+    } else {
+        // calculate the resulting coordinate
+        Some((digit - parse_offset) as u8)
+    }
 }
 
 fn decode_coordinate(notation: &str, reverse_index: usize, parse_radix: u32, parse_offset: u32, coordinate_name: &str, valid_range: &str) -> u8 {
@@ -21,26 +38,10 @@ fn decode_coordinate(notation: &str, reverse_index: usize, parse_radix: u32, par
         // if we didn't find any thing in the required position, bail out:
         None => invalid(&format!("Missing {}", coordinate_name)),
 
-        /*
-            If we did find a character in the needed position:
-                Try to parse the character to 0..7
-                If it's a rank (a..h) then we'll want to treat it as base 18 (0..h) and subtract 10
-                If it's a file (1..8) then we'll want to treat it as base 10 (0..9) and subtract 1
-        */
-        Some(c) => match c.to_digit(parse_radix) {
 
-            // if parsing succeeds:
-            Some(x) => {
-
-                // is it out of range?
-                if (x < parse_offset) || (x > parse_offset + 7) { invalid_coordinate(c); }
-
-                // return the result
-                (x - parse_offset) as u8
-            },
-
-            // if it was not parseable as a digit
+        Some(c) => match parse_coordinate(c, parse_radix, parse_offset) {
             None => invalid_coordinate(c),
+            Some(coordinate) => coordinate
         },
     }
 }
@@ -55,14 +56,22 @@ fn decode_file(notation: &str) -> u8 {
     decode_coordinate(notation, 1, 18, 10, "file", "a..h")
 }
 
-fn decode_piecetype_character(notation: &str, piecetype_character: char) -> PieceType{
+fn decode_piecetype_character(notation: &str, piecetype_character: char, is_capturing_move: bool) -> PieceType{
+
     match piecetype_character {
         'K' => PieceType::King,
         'Q' => PieceType::Queen,
         'B' => PieceType::Bishop,
         'R' => PieceType::Rook,
         'N' => PieceType::Knight,
-        _ => panic!("Invalid piece {} in move notation: {}. Must be none, K, Q, R, B or N", piecetype_character, notation)
+        x => if is_capturing_move {
+            match "abcdefgh".find(x) {
+                None => panic!("This capturing notation {} does not specify a piece, so a pawn capture is assumed. However, the starting file must be a..h and instead found {}", notation, piecetype_character),
+                Some(_) => PieceType::Pawn
+            }
+        } else {
+            panic!("Invalid piece {} in move notation: {}. Must be K, Q, B, R or N", piecetype_character, notation)
+        }
     }
 }
 
@@ -72,20 +81,34 @@ fn decode_piecetype(notation: &str) -> PieceType {
         None => PieceType::Pawn,
         Some(x) => match x {
             'x' => match chars.nth(0) {
-                None => panic!("Missing piece indicator in capture move notation: {}", notation),
-                Some(y) => decode_piecetype_character(notation, y)
+                None => panic!("Missing file in pawn capturing move notation: {}", notation),
+                Some(y) => decode_piecetype_character(notation, y, true)
             },
-            _ => decode_piecetype_character(notation, x)
+            _ => decode_piecetype_character(notation, x, false)
         }
     }
 }
 
-fn decode_capture(notation: &str) -> bool {
-    match notation.chars().rev().nth(2) {
-        None => false,
+fn decode_capture(notation: &str) -> (bool, u8) {
+    let mut chars = notation.chars().rev();
+    match chars.nth(2) {
+        None => (false, 0),
         Some(x) => match x {
-            'x' => true,
-            _ => false
+            'x' => {
+                let next = chars.nth(0);
+                (true, decode_pawn_capture_source_file(&next))
+            },
+            _ => (false, 0)
+        }
+    }
+}
+
+fn decode_pawn_capture_source_file(source_file_character: &Option<char>) -> u8 {
+    match source_file_character {
+        None => 0,
+        Some(c) => match parse_coordinate(*c, 18, 10) {
+            None => 0,
+            Some(coordinate) => coordinate
         }
     }
 }
@@ -94,14 +117,15 @@ pub fn decode(notation: String) -> Notation {
     // todo: validate notation only contains low-value utf-8 characters
     let rank = decode_rank(&notation);
     let file = decode_file(&notation);
+    let (capture, pawn_capture_source_file) = decode_capture(&notation);
     let piece_type = decode_piecetype(&notation);
-    let capture = decode_capture(&notation);
     Notation {
         text: notation.to_string(),
         rank: rank,
         file: file,
         piece_type: piece_type,
-        capture: capture
+        capture: capture,
+        pawn_capture_source_file: pawn_capture_source_file
     }
 }
 
@@ -116,7 +140,8 @@ mod tests {
             file: 0,
             rank: 0,
             piece_type: PieceType::Pawn,
-            capture: false
+            capture: false,
+            pawn_capture_source_file: 0
         };
         mutation(&mut result);
         result
@@ -236,6 +261,27 @@ mod tests {
             x.text = notation.to_string();
             x.piece_type = PieceType::King;
             x.capture = true;
+        });
+        let actual = decode(notation.to_string());
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    #[should_panic(expected="Missing file in pawn capturing move")]
+    fn when_a_capture_symbol_is_used_for_a_pawn_but_the_source_file_is_missing() {
+        decode("xd5".to_string());
+    }
+
+    #[test]
+    fn when_a_capture_symbol_is_used_for_a_pawn_including_source_file() {
+        let notation = "exd5";
+        let expected = build_expected(|mut x| {
+            x.text = notation.to_string();
+            x.piece_type = PieceType::Pawn;
+            x.capture = true;
+            x.pawn_capture_source_file = 4;
+            x.rank = 4;
+            x.file = 3;
         });
         let actual = decode(notation.to_string());
         assert_eq!(actual, expected);
