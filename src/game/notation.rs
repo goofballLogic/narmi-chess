@@ -58,6 +58,7 @@ fn decode_file(notation: &str) -> u8 {
 
 fn decode_piecetype_character(notation: &str, piecetype_character: char, is_capturing_move: bool) -> PieceType{
 
+    let invalid = || panic!("Invalid piece {} in move notation: {}. Must be K, Q, B, R or N, or for a pawn, the source file a..h", piecetype_character, notation);
     match piecetype_character {
         'K' => PieceType::King,
         'Q' => PieceType::Queen,
@@ -66,11 +67,11 @@ fn decode_piecetype_character(notation: &str, piecetype_character: char, is_capt
         'N' => PieceType::Knight,
         x => if is_capturing_move {
             match "abcdefgh".find(x) {
-                None => panic!("This capturing notation {} does not specify a piece, so a pawn capture is assumed. However, the starting file must be a..h and instead found {}", notation, piecetype_character),
+                None => invalid(),
                 Some(_) => PieceType::Pawn
             }
         } else {
-            panic!("Invalid piece {} in move notation: {}. Must be K, Q, B, R or N", piecetype_character, notation)
+            invalid()
         }
     }
 }
@@ -264,6 +265,12 @@ mod tests {
         });
         let actual = decode(notation.to_string());
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    #[should_panic(expected="Invalid piece")]
+    fn when_a_capture_symbole_is_used_but_named_piece_is_invalid() {
+        decode("Zxa1".to_string());
     }
 
     #[test]
