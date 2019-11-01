@@ -114,14 +114,23 @@ fn decode_pawn_capture_source_file(source_file_character: &Option<char>) -> u8 {
     }
 }
 
+fn clean_notation(notation: &str) -> &str {
+    if notation.ends_with("e.p.") {
+        return &notation[..notation.len()-4];
+    }
+    return notation;
+}
+
 pub fn decode(notation: String) -> Notation {
     // todo: validate notation only contains low-value utf-8 characters
-    let rank = decode_rank(&notation);
-    let file = decode_file(&notation);
-    let (capture, pawn_capture_source_file) = decode_capture(&notation);
-    let piece_type = decode_piecetype(&notation);
+
+    let cleaned = clean_notation(&notation);
+    let rank = decode_rank(cleaned);
+    let file = decode_file(cleaned);
+    let (capture, pawn_capture_source_file) = decode_capture(cleaned);
+    let piece_type = decode_piecetype(cleaned);
     Notation {
-        text: notation.to_string(),
+        text: notation,
         rank: rank,
         file: file,
         piece_type: piece_type,
@@ -283,6 +292,21 @@ mod tests {
     fn when_a_capture_symbol_is_used_for_a_pawn_including_source_file() {
         let notation = "exd5";
         let expected = build_expected(|mut x| {
+            x.text = notation.to_string();
+            x.piece_type = PieceType::Pawn;
+            x.capture = true;
+            x.pawn_capture_source_file = 4;
+            x.rank = 4;
+            x.file = 3;
+        });
+        let actual = decode(notation.to_string());
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn the_en_passant_suffix_can_be_ignored_for_a_capture() {
+        let notation = "exd5e.p.";
+        let expected = build_expected(|mut x | {
             x.text = notation.to_string();
             x.piece_type = PieceType::Pawn;
             x.capture = true;
