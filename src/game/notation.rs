@@ -265,6 +265,12 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Invalid piece")]
+    fn when_specified_piece_is_invalid_should_panic() {
+        decode("Se4".to_string());
+    }
+
+    #[test]
     fn when_a_capture_symbol_is_used_for_a_named_piece() {
         let notation = "Kxa1";
         let expected = build_expected(|mut x| {
