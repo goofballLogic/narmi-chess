@@ -3,11 +3,18 @@ use super::piece_type::*;
 #[derive(Debug, PartialEq)]
 pub struct Notation {
     text: String,
-    rank: u8,
-    file: u8,
+    rank: Option<u8>,
+    file: Option<u8>,
     piece_type: PieceType,
     capture: bool,
-    pawn_capture_source_file: u8,
+    from_file: Option<u8>,
+    from_rank: Option<u8>,
+    check: bool,
+    checkmate: bool,
+    enpassant: bool,
+    queen_side_castle: bool,
+    king_side_castle: bool,
+    promoted_to_piece_type: Option<PieceType>
 }
 
 /*
@@ -58,7 +65,7 @@ fn decode_file(notation: &str) -> u8 {
 
 fn decode_piecetype_character(notation: &str, piecetype_character: char, is_capturing_move: bool) -> PieceType{
 
-    let invalid = || panic!("Invalid piece {} in move notation: {}. Must be K, Q, B, R or N, or for a pawn, the source file a..h", piecetype_character, notation);
+    let invalid = || panic!("Invalid piece {} in move notation: {}. Must be K, Q, B, R or N, or the source file a..h", piecetype_character, notation);
     match piecetype_character {
         'K' => PieceType::King,
         'Q' => PieceType::Queen,
@@ -90,27 +97,24 @@ fn decode_piecetype(notation: &str) -> PieceType {
     }
 }
 
-fn decode_capture(notation: &str) -> (bool, u8) {
+fn decode_capture(notation: &str) -> (bool, Option<u8>) {
     let mut chars = notation.chars().rev();
     match chars.nth(2) {
-        None => (false, 0),
+        None => (false, None),
         Some(x) => match x {
             'x' => {
                 let next = chars.nth(0);
-                (true, decode_pawn_capture_source_file(&next))
+                (true, decode_from_file(&next))
             },
-            _ => (false, 0)
+            _ => (false, None)
         }
     }
 }
 
-fn decode_pawn_capture_source_file(source_file_character: &Option<char>) -> u8 {
-    match source_file_character {
-        None => 0,
-        Some(c) => match parse_coordinate(*c, 18, 10) {
-            None => 0,
-            Some(coordinate) => coordinate
-        }
+fn decode_from_file(from_file_character: &Option<char>) -> Option<u8> {
+    match from_file_character {
+        None => None,
+        Some(c) => parse_coordinate(*c, 18, 10)
     }
 }
 
@@ -125,9 +129,9 @@ pub fn decode(notation: String) -> Notation {
     // todo: validate notation only contains low-value utf-8 characters
 
     let cleaned = clean_notation(&notation);
-    let rank = decode_rank(cleaned);
-    let file = decode_file(cleaned);
-    let (capture, pawn_capture_source_file) = decode_capture(cleaned);
+    let rank = Some(decode_rank(cleaned));
+    let file = Some(decode_file(cleaned));
+    let (capture, from_file) = decode_capture(cleaned);
     let piece_type = decode_piecetype(cleaned);
     Notation {
         text: notation,
@@ -135,7 +139,14 @@ pub fn decode(notation: String) -> Notation {
         file: file,
         piece_type: piece_type,
         capture: capture,
-        pawn_capture_source_file: pawn_capture_source_file
+        from_file: from_file,
+        from_rank: None,
+        check: false,
+        checkmate: false,
+        enpassant: false,
+        queen_side_castle: false,
+        king_side_castle: false,
+        promoted_to_piece_type: None
     }
 }
 
@@ -144,17 +155,76 @@ mod tests {
 
     use super::*;
 
-    fn build_expected(mutation: impl Fn(&mut Notation)) -> Notation {
-        let mut result = Notation {
-            text: "a1".to_string(),
-            file: 0,
-            rank: 0,
+    fn test_decode(notation: &str, configure_expected: impl Fn(&mut Notation)) {
+        let mut expected = Notation {
+            text: notation.to_string(),
+            file: Some(0),
+            rank: Some(0),
             piece_type: PieceType::Pawn,
             capture: false,
-            pawn_capture_source_file: 0
+            from_file: None,
+            from_rank: None,
+            check: false,
+            checkmate: false,
+            enpassant: false,
+            queen_side_castle: false,
+            king_side_castle: false,
+            promoted_to_piece_type: None
         };
-        mutation(&mut result);
-        result
+        configure_expected(&mut expected);
+        let actual = decode(notation.to_string());
+        assert_eq!(expected, actual);
+    }
+
+    // suffixes
+
+    #[test]
+    fn should_handle_check_symbol() {
+        test_decode("a1+", |x| { x.check = true; });
+    }
+
+    #[test]
+    fn should_handle_checkmate_symbol() {
+        test_decode("a1#", |x| { x.checkmate = true; });
+    }
+
+    #[test]
+    fn should_handle_enpassant_suffix() {
+        test_decode("a2e.p.", |x| {
+            x.enpassant = true;
+            x.rank = Some(1);
+        });
+    }
+
+    #[test]
+    fn should_handle_promotion_suffix() {
+        test_decode("e8=Q", |x| {
+            x.promoted_to_piece_type = Some(PieceType::Queen);
+            x.file = Some(7);
+            x.rank = Some(7);
+        });
+    }
+
+    // castling
+
+    #[test]
+    fn should_handle_kingside_castle() {
+        test_decode("0-0", |x| { x.king_side_castle = true; });
+    }
+
+    #[test]
+    fn should_handle_kingside_castle_PGN_variant() {
+        test_decode("O-O", |x| { x.king_side_castle = true; });
+    }
+
+    #[test]
+    fn should_handle_queenside_castle() {
+        test_decode("0-0-0", |x| { x.queen_side_castle = true; });
+    }
+
+    #[test]
+    fn should_handle_queenside_castle_PGN_variant() {
+        test_decode("O-O-O", |x| { x.queen_side_castle = true; });
     }
 
     #[test]
@@ -163,7 +233,7 @@ mod tests {
         decode("4".to_string());
     }
 
-    // rank tests
+    // destination rank and file
 
     #[test]
     #[should_panic(expected="Invalid rank q")]
@@ -182,8 +252,6 @@ mod tests {
     fn rank_less_than_1_should_panic() {
         decode("0".to_string());
     }
-
-    // file tests
 
     #[test]
     #[should_panic(expected="Invalid file !")]
@@ -205,49 +273,87 @@ mod tests {
 
     #[test]
     fn translate_rank_and_file() {
-        let notation = "e4";
-        let expected = build_expected(|x| {
-            x.text = notation.to_string();
-            x.rank = 3;
-            x.file = 4;
-            x.piece_type = PieceType::Pawn;
+        test_decode("e4", |x| {
+            x.rank = Some(3);
+            x.file = Some(4);
         });
-
-        let actual = decode(notation.to_string());
-        assert_eq!(expected, actual);
     }
 
     #[test]
     fn translate_rank_and_file_upper_bounds() {
-        let notation = "h8";
-        let expected = build_expected(|mut x| {
-            x.text = notation.to_string();
-            x.rank = 7;
-            x.file = 7;
-            x.piece_type = PieceType::Pawn;
+        test_decode("h8", |x| {
+            x.rank = Some(7);
+            x.file = Some(7);
         });
-        let actual = decode(notation.to_string());
-        assert_eq!(expected, actual);
     }
 
     #[test]
     fn translate_rank_and_file_lower_bounds() {
-        let notation = "a1";
-        let expected = build_expected(|mut x| {
-            x.text = notation.to_string();
-            x.rank = 0;
-            x.file = 0;
-            x.piece_type = PieceType::Pawn;
+        test_decode("a1", |x| {
+            x.rank = Some(0);
+            x.file = Some(0);
         });
-        let actual = decode(notation.to_string());
-        assert_eq!(expected, actual);
+    }
+
+    // capturing
+    #[test]
+    fn note_a_capture_symbol() {
+        test_decode("xa1", |x| {
+            x.capture = true;
+        });
+    }
+
+    // source rank and file
+    #[test]
+    fn note_source_rank() {
+        test_decode("bRa1", |x| {
+            x.piece_type = PieceType::Rook;
+            x.from_rank = Some(1);
+        });
     }
 
     #[test]
+    fn note_source_file() {
+        test_decode("2Ra1", |x| {
+            x.piece_type = PieceType::Rook;
+            x.from_file = Some(1);
+        });
+    }
+
+    #[test]
+    fn note_source_rank_and_file() {
+        test_decode("c2Qa1", |x| {
+            x.piece_type = PieceType::Queen;
+            x.from_file = Some(1);
+            x.from_rank = Some(2);
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid source rank")]
+    fn invalid_source_rank() {
+        decode("iRa1".to_string());
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid source file")]
+    fn invalid_source_file() {
+        decode("9Ra1".to_string());
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid source file")]
+    fn invalid_source_rank_and_invalid_source_file() {
+        decode("i9Ra1".to_string());
+    }
+
+    // moving piece identification
+
+    #[test]
     fn when_not_specified_piece_is_assumed_to_be_a_pawn() {
-        let notation = "a1";
-        let actual = decode(notation.to_string());
-        assert_eq!(actual.piece_type, PieceType::Pawn);
+        test_decode("a1", |x| {
+            x.piece_type = PieceType::Pawn
+        });
     }
 
     #[test]
@@ -270,57 +376,51 @@ mod tests {
         decode("Se4".to_string());
     }
 
-    #[test]
-    fn when_a_capture_symbol_is_used_for_a_named_piece() {
-        let notation = "Kxa1";
-        let expected = build_expected(|mut x| {
-            x.text = notation.to_string();
-            x.piece_type = PieceType::King;
-            x.capture = true;
-        });
-        let actual = decode(notation.to_string());
-        assert_eq!(actual, expected);
-    }
+    // #[test]
+    // fn when_a_capture_symbol_is_used_for_a_named_piece() {
+    //     test_decode("Kxa1", |x| {
+    //         x.piece_type = PieceType::King;
+    //         x.capture = true;
+    //     });
+    // }
 
-    #[test]
-    #[should_panic(expected="Invalid piece")]
-    fn when_a_capture_symbole_is_used_but_named_piece_is_invalid() {
-        decode("Zxa1".to_string());
-    }
+    // #[test]
+    // #[should_panic(expected="Invalid piece")]
+    // fn when_a_capture_symbole_is_used_but_named_piece_is_invalid() {
+    //     decode("Zxa1".to_string());
+    // }
 
-    #[test]
-    #[should_panic(expected="Missing file in pawn capturing move")]
-    fn when_a_capture_symbol_is_used_for_a_pawn_but_the_source_file_is_missing() {
-        decode("xd5".to_string());
-    }
+    // #[test]
+    // #[should_panic(expected="Missing file in pawn capturing move")]
+    // fn when_a_capture_symbol_is_used_for_a_pawn_but_the_from_file_is_missing() {
+    //     decode("xd5".to_string());
+    // }
 
-    #[test]
-    fn when_a_capture_symbol_is_used_for_a_pawn_including_source_file() {
-        let notation = "exd5";
-        let expected = build_expected(|mut x| {
-            x.text = notation.to_string();
-            x.piece_type = PieceType::Pawn;
-            x.capture = true;
-            x.pawn_capture_source_file = 4;
-            x.rank = 4;
-            x.file = 3;
-        });
-        let actual = decode(notation.to_string());
-        assert_eq!(actual, expected);
-    }
+    // #[test]
+    // fn when_a_capture_symbol_is_used_for_a_pawn_including_from_file() {
+    //     test_decode("bxa1", |x| {
+    //         x.piece_type = PieceType::Pawn;
+    //         x.capture = true;
+    //         x.from_file = Some(1);
+    //     });
+    // }
 
-    #[test]
-    fn the_en_passant_suffix_can_be_ignored_for_a_capture() {
-        let notation = "exd5e.p.";
-        let expected = build_expected(|mut x | {
-            x.text = notation.to_string();
-            x.piece_type = PieceType::Pawn;
-            x.capture = true;
-            x.pawn_capture_source_file = 4;
-            x.rank = 4;
-            x.file = 3;
-        });
-        let actual = decode(notation.to_string());
-        assert_eq!(actual, expected);
-    }
+    // #[test]
+    // fn the_en_passant_suffix_can_be_ignored_for_a_capture() {
+    //     test_decode("exd6e.p.", |x| {
+    //         x.capture = true;
+    //         x.from_file = Some(4);
+    //         x.rank = Some(5);
+    //         x.file = Some(3);
+    //     });
+    // }
+
+    // #[test]
+    // fn when_necessary_a_disambiguating_file_may_be_specified() {
+    //     test_decode("Bbc1", |x| {
+    //         x.piece_type = PieceType::Bishop;
+    //         x.from_file = Some(2);
+    //         x.file = Some(3);
+    //     });
+    // }
 }
