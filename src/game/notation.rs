@@ -92,12 +92,9 @@ fn process_coordinates(notation: &str) -> (Option<u8>, Option<u8>, &str) {
     // destination is always file, rank
     let mut chars = notation.chars().rev();
     let rank_char = chars.nth(0);
-println!(">>{}<<", notation);
     let (rank, without_rank) = parse_and_trim_coordinate_suffix(rank_char, notation, 10, 1);
-println!(">>{}<<", without_rank);
     let file_char = if rank.is_some() { chars.nth(0) } else { rank_char };
     let (file, without_file_and_rank) = parse_and_trim_coordinate_suffix(file_char, without_rank, 18, 10);
-println!(">>{}<<", without_file_and_rank);
     (rank, file, without_file_and_rank)
 }
 
@@ -158,11 +155,8 @@ pub fn decode(notation: String) -> Notation {
     let (promoted_to_piece_type, ex_promotion) = process_promotion(ex_castling);
     let (rank, file, ex_destination) = process_coordinates(ex_promotion);
     let (capture, ex_capture) = process_capture(ex_destination);
-println!(">{}<", ex_destination);
     let (piece_type, ex_piece_type) = process_piece_type(ex_capture);
-println!(">{}<", ex_capture);
     let (source_rank, source_file, ex_source_coordinates) = process_coordinates(ex_piece_type);
-println!(">{}<", ex_source_coordinates);
     match ex_source_coordinates {
         "" => {
             let parsed = Notation {
