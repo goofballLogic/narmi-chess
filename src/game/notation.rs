@@ -5,7 +5,7 @@ pub struct Notation {
     text: String,
     rank: Option<u8>,
     file: Option<u8>,
-    piece_type: PieceType,
+    piece_type: Option<PieceType>,
     capture: bool,
     from_file: Option<u8>,
     from_rank: Option<u8>,
@@ -17,6 +17,23 @@ pub struct Notation {
     promoted_to_piece_type: Option<PieceType>
 }
 
+impl Notation {
+    fn panic_invalid(&self, why: &str) {
+        panic!("{} in notation: {}", why, self.text);
+    }
+
+    fn validate_parsing(&self) {
+
+        if !(self.queen_side_castle || self.king_side_castle) {
+            match (self.rank, self.file) {
+                (None, None) => { self.panic_invalid("Both rank and file are missing (or invalid)"); },
+                (None, _) => { self.panic_invalid("Rank is missing (or invalid)"); },
+                (_, None) => { self.panic_invalid("File is missing (or invalid)"); },
+                _ => {}
+            }
+        }
+    }
+}
 /*
     Try to parse the character to 0..7
         If it's a rank (a..h) then we'll want to treat it as base 18 (0..h) and subtract 10
@@ -33,120 +50,140 @@ fn parse_coordinate(c: char, parse_radix: u32, parse_offset: u32) -> Option<u8> 
     }
 }
 
-fn decode_coordinate(notation: &str, reverse_index: usize, parse_radix: u32, parse_offset: u32, coordinate_name: &str, valid_range: &str) -> u8 {
-
-    // some panics that will come in handy
-    let invalid = | what: &str | panic!("{} in move notation: {}. Must be {}", what, notation, valid_range);
-    let invalid_coordinate = | c: char | invalid(&format!("Invalid {} {}", coordinate_name, c));
-
-    // try to pick the character which is nth from the end
-    match notation.chars().rev().nth(reverse_index) {
-
-        // if we didn't find any thing in the required position, bail out:
-        None => invalid(&format!("Missing {}", coordinate_name)),
-
-
-        Some(c) => match parse_coordinate(c, parse_radix, parse_offset) {
-            None => invalid_coordinate(c),
-            Some(coordinate) => coordinate
-        },
-    }
-}
-
-// Ranks are rows that go from side to side across the chessboard and are referred to by numbers
-fn decode_rank(notation: &str) -> u8 {
-    decode_coordinate(notation, 0, 10, 1, "rank", "1..8")
-}
-
-// Files are columns that go up and down the chessboard, and each board has eight of them (A-H)
-fn decode_file(notation: &str) -> u8 {
-    decode_coordinate(notation, 1, 18, 10, "file", "a..h")
-}
-
-fn decode_piecetype_character(notation: &str, piecetype_character: char, is_capturing_move: bool) -> PieceType{
-
-    let invalid = || panic!("Invalid piece {} in move notation: {}. Must be K, Q, B, R or N, or the source file a..h", piecetype_character, notation);
+fn decode_piecetype(piecetype_character: &str) -> Option<PieceType> {
     match piecetype_character {
-        'K' => PieceType::King,
-        'Q' => PieceType::Queen,
-        'B' => PieceType::Bishop,
-        'R' => PieceType::Rook,
-        'N' => PieceType::Knight,
-        x => if is_capturing_move {
-            match "abcdefgh".find(x) {
-                None => invalid(),
-                Some(_) => PieceType::Pawn
-            }
-        } else {
-            invalid()
+        "K" => Some(PieceType::King),
+        "Q" => Some(PieceType::Queen),
+        "B" => Some(PieceType::Bishop),
+        "R" => Some(PieceType::Rook),
+        "N" => Some(PieceType::Knight),
+        _ => None
+    }
+}
+
+fn process_piece_type(notation: &str) -> (Option<PieceType>, &str) {
+    match notation.len() {
+        0 => (Some(PieceType::Pawn), notation),
+        _ => match decode_piecetype(&notation[notation.len() - 1..]) {
+            None => (Some(PieceType::Pawn), notation),
+            some_piece => (some_piece, &notation[..notation.len() - 1])
         }
     }
 }
 
-fn decode_piecetype(notation: &str) -> PieceType {
+fn process_capture(notation: &str) -> (bool, &str) {
+    match notation.ends_with("x") {
+        true => (true, &notation[..notation.len()-1]),
+        false => (false, notation)
+    }
+}
+
+fn parse_and_trim_coordinate_suffix(last_char: Option<char>, notation: &str, parse_radix: u32, parse_offset: u32) -> (Option<u8>, &str) {
+    match last_char {
+        Some(x) => match parse_coordinate(x, parse_radix, parse_offset) {
+            None => (None, notation),
+            some_parsed_coordinate => (some_parsed_coordinate, &notation[..notation.len()-1])
+        },
+        None => (None, notation)
+    }
+}
+
+fn process_coordinates(notation: &str) -> (Option<u8>, Option<u8>, &str) {
+    // destination is always file, rank
     let mut chars = notation.chars().rev();
-    match chars.nth(2) {
-        None => PieceType::Pawn,
-        Some(x) => match x {
-            'x' => match chars.nth(0) {
-                None => panic!("Missing file in pawn capturing move notation: {}", notation),
-                Some(y) => decode_piecetype_character(notation, y, true)
-            },
-            _ => decode_piecetype_character(notation, x, false)
+    let rank_char = chars.nth(0);
+println!(">>{}<<", notation);
+    let (rank, without_rank) = parse_and_trim_coordinate_suffix(rank_char, notation, 10, 1);
+println!(">>{}<<", without_rank);
+    let file_char = if rank.is_some() { chars.nth(0) } else { rank_char };
+    let (file, without_file_and_rank) = parse_and_trim_coordinate_suffix(file_char, without_rank, 18, 10);
+println!(">>{}<<", without_file_and_rank);
+    (rank, file, without_file_and_rank)
+}
+
+fn process_promotion(notation: &str) -> (Option<PieceType>, &str) {
+    match notation.len() {
+        0 | 1 => (None, notation),
+        len => match &notation[len - 2..len - 1] {
+            "=" => (
+                decode_piecetype(&notation[len - 1..]),
+                &notation[..len - 2]
+            ),
+            _ => (None, notation)
         }
     }
 }
 
-fn decode_capture(notation: &str) -> (bool, Option<u8>) {
-    let mut chars = notation.chars().rev();
-    match chars.nth(2) {
-        None => (false, None),
-        Some(x) => match x {
-            'x' => {
-                let next = chars.nth(0);
-                (true, decode_from_file(&next))
-            },
-            _ => (false, None)
+fn process_castling(notation: &str) -> (bool, bool, &str) {
+    match notation {
+        "0-0-0" => (false, true, ""),
+        "O-O-O" => (false, true, ""),
+        "0-0" => (true, false, ""),
+        "O-O" => (true, false, ""),
+        _ => (false, false, notation)
+    }
+}
+
+fn process_suffix(notation: &str) -> (bool, bool, bool, &str) {
+    let mut check = false;
+    let mut checkmate = false;
+    let mut enpassant = false;
+    let mut working = notation;
+    let mut complete = false;
+    while !complete {
+        if working.ends_with("e.p.") {
+            enpassant = true;
+            working = &working[..working.len()-4];
+            continue;
         }
+        if working.ends_with("+") {
+            check = true;
+            working = &working[..working.len()-1];
+            continue;
+        }
+        if working.ends_with("#") {
+            checkmate = true;
+            working = &working[..working.len()-1];
+            continue;
+        }
+        complete = true;
     }
-}
-
-fn decode_from_file(from_file_character: &Option<char>) -> Option<u8> {
-    match from_file_character {
-        None => None,
-        Some(c) => parse_coordinate(*c, 18, 10)
-    }
-}
-
-fn clean_notation(notation: &str) -> &str {
-    if notation.ends_with("e.p.") {
-        return &notation[..notation.len()-4];
-    }
-    return notation;
+    (checkmate, check, enpassant, working)
 }
 
 pub fn decode(notation: String) -> Notation {
     // todo: validate notation only contains low-value utf-8 characters
-
-    let cleaned = clean_notation(&notation);
-    let rank = Some(decode_rank(cleaned));
-    let file = Some(decode_file(cleaned));
-    let (capture, from_file) = decode_capture(cleaned);
-    let piece_type = decode_piecetype(cleaned);
-    Notation {
-        text: notation,
-        rank: rank,
-        file: file,
-        piece_type: piece_type,
-        capture: capture,
-        from_file: from_file,
-        from_rank: None,
-        check: false,
-        checkmate: false,
-        enpassant: false,
-        queen_side_castle: false,
-        king_side_castle: false,
-        promoted_to_piece_type: None
+    let (checkmate, check, enpassant, ex_suffix) = process_suffix(&notation);
+    let (king_side_castle, queen_side_castle, ex_castling) = process_castling(ex_suffix);
+    let (promoted_to_piece_type, ex_promotion) = process_promotion(ex_castling);
+    let (rank, file, ex_destination) = process_coordinates(ex_promotion);
+    let (capture, ex_capture) = process_capture(ex_destination);
+println!(">{}<", ex_destination);
+    let (piece_type, ex_piece_type) = process_piece_type(ex_capture);
+println!(">{}<", ex_capture);
+    let (source_rank, source_file, ex_source_coordinates) = process_coordinates(ex_piece_type);
+println!(">{}<", ex_source_coordinates);
+    match ex_source_coordinates {
+        "" => {
+            let parsed = Notation {
+                text: notation,
+                rank: rank,
+                file: file,
+                piece_type: piece_type,
+                capture: capture,
+                from_rank: source_rank,
+                from_file: source_file,
+                check: check,
+                checkmate: checkmate,
+                enpassant: enpassant,
+                queen_side_castle: queen_side_castle,
+                king_side_castle: king_side_castle,
+                promoted_to_piece_type: promoted_to_piece_type
+            };
+            parsed.validate_parsing();
+            parsed
+        },
+        _ => { panic!("Invalid notation: {}", notation); },
     }
 }
 
@@ -160,7 +197,7 @@ mod tests {
             text: notation.to_string(),
             file: Some(0),
             rank: Some(0),
-            piece_type: PieceType::Pawn,
+            piece_type: Some(PieceType::Pawn),
             capture: false,
             from_file: None,
             from_rank: None,
@@ -197,10 +234,11 @@ mod tests {
     }
 
     #[test]
-    fn should_handle_promotion_suffix() {
+    #[allow(non_snake_case)]
+    fn should_handle_promotion_suffix_PGN() {
         test_decode("e8=Q", |x| {
             x.promoted_to_piece_type = Some(PieceType::Queen);
-            x.file = Some(7);
+            x.file = Some(4);
             x.rank = Some(7);
         });
     }
@@ -209,66 +247,40 @@ mod tests {
 
     #[test]
     fn should_handle_kingside_castle() {
-        test_decode("0-0", |x| { x.king_side_castle = true; });
+        test_decode("0-0", |x| {
+            x.king_side_castle = true;
+            x.file = None;
+            x.rank = None;
+        });
     }
 
     #[test]
+    #[allow(non_snake_case)]
     fn should_handle_kingside_castle_PGN_variant() {
-        test_decode("O-O", |x| { x.king_side_castle = true; });
+        test_decode("O-O", |x| {
+            x.king_side_castle = true;
+            x.file = None;
+            x.rank = None;
+        });
     }
 
     #[test]
     fn should_handle_queenside_castle() {
-        test_decode("0-0-0", |x| { x.queen_side_castle = true; });
+        test_decode("0-0-0", |x| {
+            x.queen_side_castle = true;
+            x.file = None;
+            x.rank = None;
+        });
     }
 
     #[test]
+    #[allow(non_snake_case)]
     fn should_handle_queenside_castle_PGN_variant() {
-        test_decode("O-O-O", |x| { x.queen_side_castle = true; });
-    }
-
-    #[test]
-    #[should_panic(expected="Missing file")]
-    fn notation_less_than_two_characters_long_should_panic() {
-        decode("4".to_string());
-    }
-
-    // destination rank and file
-
-    #[test]
-    #[should_panic(expected="Invalid rank q")]
-    fn non_number_rank_should_panic() {
-        decode("q".to_string());
-    }
-
-    #[test]
-    #[should_panic(expected="Invalid rank 9")]
-    fn rank_greater_than_8_should_panic() {
-        decode("9".to_string());
-    }
-
-    #[test]
-    #[should_panic(expected="Invalid rank 0")]
-    fn rank_less_than_1_should_panic() {
-        decode("0".to_string());
-    }
-
-    #[test]
-    #[should_panic(expected="Invalid file !")]
-    fn non_alpha_file_should_panic() {
-        decode("!4".to_string());
-    }
-
-    #[test]
-    #[should_panic(expected="Invalid file 9")]
-    fn file_less_than_a_should_panic() {
-        decode("94".to_string());
-    }
-
-    #[test]
-    #[should_panic(expected="Invalid file i")]
-    fn file_more_than_h_should_panic() {
-        decode("i4".to_string());
+        test_decode("O-O-O", |x| {
+            x.queen_side_castle = true;
+            x.file = None;
+            x.rank = None;
+        });
     }
 
     #[test]
@@ -295,6 +307,50 @@ mod tests {
         });
     }
 
+    //destination rank and file
+
+    #[test]
+    #[should_panic(expected="File is missing (or invalid) in notation: 4")]
+    fn notation_less_than_two_characters_long_should_panic() {
+        decode("4".to_string());
+    }
+
+    #[test]
+    #[should_panic(expected="Invalid notation: q")]
+    fn non_number_rank_should_panic() {
+        decode("q".to_string());
+    }
+
+    #[test]
+    #[should_panic(expected="Invalid notation: 9")]
+    fn rank_greater_than_8_should_panic() {
+        decode("9".to_string());
+    }
+
+    #[test]
+    #[should_panic(expected="Invalid notation: 0")]
+    fn rank_less_than_1_should_panic() {
+        decode("0".to_string());
+    }
+
+    #[test]
+    #[should_panic(expected="Invalid notation: !4")]
+    fn non_alpha_file_should_panic() {
+        decode("!4".to_string());
+    }
+
+    #[test]
+    #[should_panic(expected="Invalid notation: 94")]
+    fn file_less_than_a_should_panic() {
+        decode("94".to_string());
+    }
+
+    #[test]
+    #[should_panic(expected="Invalid notation: i4")]
+    fn file_more_than_h_should_panic() {
+        decode("i4".to_string());
+    }
+
     // capturing
     #[test]
     fn note_a_capture_symbol() {
@@ -303,56 +359,12 @@ mod tests {
         });
     }
 
-    // source rank and file
-    #[test]
-    fn note_source_rank() {
-        test_decode("bRa1", |x| {
-            x.piece_type = PieceType::Rook;
-            x.from_rank = Some(1);
-        });
-    }
-
-    #[test]
-    fn note_source_file() {
-        test_decode("2Ra1", |x| {
-            x.piece_type = PieceType::Rook;
-            x.from_file = Some(1);
-        });
-    }
-
-    #[test]
-    fn note_source_rank_and_file() {
-        test_decode("c2Qa1", |x| {
-            x.piece_type = PieceType::Queen;
-            x.from_file = Some(1);
-            x.from_rank = Some(2);
-        });
-    }
-
-    #[test]
-    #[should_panic(expected = "Invalid source rank")]
-    fn invalid_source_rank() {
-        decode("iRa1".to_string());
-    }
-
-    #[test]
-    #[should_panic(expected = "Invalid source file")]
-    fn invalid_source_file() {
-        decode("9Ra1".to_string());
-    }
-
-    #[test]
-    #[should_panic(expected = "Invalid source file")]
-    fn invalid_source_rank_and_invalid_source_file() {
-        decode("i9Ra1".to_string());
-    }
-
     // moving piece identification
 
     #[test]
     fn when_not_specified_piece_is_assumed_to_be_a_pawn() {
         test_decode("a1", |x| {
-            x.piece_type = PieceType::Pawn
+            x.piece_type = Some(PieceType::Pawn)
         });
     }
 
@@ -366,61 +378,58 @@ mod tests {
             ("Na1", PieceType::Knight)
         ].iter() {
             let actual = decode(notation.to_string());
-            assert_eq!(actual.piece_type, *piece_type);
+            assert_eq!(actual.piece_type.unwrap(), *piece_type);
         }
     }
 
     #[test]
-    #[should_panic(expected = "Invalid piece")]
+    #[should_panic(expected = "Invalid notation: Se4")]
     fn when_specified_piece_is_invalid_should_panic() {
         decode("Se4".to_string());
     }
 
-    // #[test]
-    // fn when_a_capture_symbol_is_used_for_a_named_piece() {
-    //     test_decode("Kxa1", |x| {
-    //         x.piece_type = PieceType::King;
-    //         x.capture = true;
-    //     });
-    // }
+    // source rank and file
+    #[test]
+    fn note_source_file() {
+        test_decode("bRa1", |x| {
+            x.piece_type = Some(PieceType::Rook);
+            x.from_file = Some(1);
+        });
+    }
 
-    // #[test]
-    // #[should_panic(expected="Invalid piece")]
-    // fn when_a_capture_symbole_is_used_but_named_piece_is_invalid() {
-    //     decode("Zxa1".to_string());
-    // }
+    #[test]
+    fn note_source_rank() {
+        test_decode("2Ra1", |x| {
+            x.piece_type = Some(PieceType::Rook);
+            x.from_rank = Some(1);
+        });
+    }
 
-    // #[test]
-    // #[should_panic(expected="Missing file in pawn capturing move")]
-    // fn when_a_capture_symbol_is_used_for_a_pawn_but_the_from_file_is_missing() {
-    //     decode("xd5".to_string());
-    // }
+    #[test]
+    fn note_source_rank_and_file() {
+        test_decode("c2Qa1", |x| {
+            x.piece_type = Some(PieceType::Queen);
+            x.from_rank = Some(1);
+            x.from_file = Some(2);
+        });
+    }
 
-    // #[test]
-    // fn when_a_capture_symbol_is_used_for_a_pawn_including_from_file() {
-    //     test_decode("bxa1", |x| {
-    //         x.piece_type = PieceType::Pawn;
-    //         x.capture = true;
-    //         x.from_file = Some(1);
-    //     });
-    // }
+    #[test]
+    #[should_panic(expected = "Invalid notation: iRa1")]
+    fn invalid_source_rank() {
+        decode("iRa1".to_string());
+    }
 
-    // #[test]
-    // fn the_en_passant_suffix_can_be_ignored_for_a_capture() {
-    //     test_decode("exd6e.p.", |x| {
-    //         x.capture = true;
-    //         x.from_file = Some(4);
-    //         x.rank = Some(5);
-    //         x.file = Some(3);
-    //     });
-    // }
+    #[test]
+    #[should_panic(expected = "Invalid notation: 9Ra1")]
+    fn invalid_source_file() {
+        decode("9Ra1".to_string());
+    }
 
-    // #[test]
-    // fn when_necessary_a_disambiguating_file_may_be_specified() {
-    //     test_decode("Bbc1", |x| {
-    //         x.piece_type = PieceType::Bishop;
-    //         x.from_file = Some(2);
-    //         x.file = Some(3);
-    //     });
-    // }
+    #[test]
+    #[should_panic(expected = "Invalid notation: i9Ra1")]
+    fn invalid_source_rank_and_invalid_source_file() {
+        decode("i9Ra1".to_string());
+    }
+
 }
