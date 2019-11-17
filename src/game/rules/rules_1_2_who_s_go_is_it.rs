@@ -6,7 +6,7 @@ then the players move alternately, with the player with the dark-coloured pieces
 use crate::game::game::*;
 use crate::game::moving::*;
 
-pub fn validate(game: &Game, next_move: String) -> Result<(), MoveError> {
+pub fn validate(_game: &Game, _next_move: String) -> Result<(), MoveError> {
     Ok(())
 }
 
