@@ -53,16 +53,16 @@ mod tests {
     fn white_pawn_capture_right_blocked_by_edge_of_board() { assert_can_not_move(true, PieceType::Pawn, (2, 7), (3, 8)); }
 
     #[test]
-    fn black_pawn_can_initially_move_forward_two() { assert_move(true, PieceType::Pawn, (6, 0), (4, 0)); }
+    fn black_pawn_can_initially_move_forward_two() { assert_move(false, PieceType::Pawn, (6, 0), (4, 0)); }
 
     #[test]
     fn black_pawn_can_move_forward_one() { assert_move(false, PieceType::Pawn, (6, 0), (5, 0)); }
 
     #[test]
-    fn black_pawn_can_capture_left() { assert_move(true, PieceType::Pawn, (5, 5), (6, 4)); }
+    fn black_pawn_can_capture_left() { assert_move(false, PieceType::Pawn, (5, 5), (6, 4)); }
 
     #[test]
-    fn black_pawn_can_capture_right() { assert_move(true, PieceType::Pawn, (5, 5), (6, 6)); }
+    fn black_pawn_can_capture_right() { assert_move(false, PieceType::Pawn, (5, 5), (6, 6)); }
 
     // black_pawn_move_forward_one_blocked_by_edge_of_board is already impossible because rank is an unsigned integer (thus can't be -1)
 
@@ -71,5 +71,5 @@ mod tests {
     // black_pawn_capture_left_blocked_by_edge_of_board is already impossible because file is an unsigned integer (thus can't be -1)
 
     #[test]
-    fn black_pawn_capture_right_blocked_by_edge_of_board() { assert_can_not_move(true, PieceType::Pawn, (6, 7), (5, 8)); }
+    fn black_pawn_capture_right_blocked_by_edge_of_board() { assert_can_not_move(false, PieceType::Pawn, (6, 7), (5, 8)); }
 }
