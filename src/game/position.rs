@@ -1,5 +1,5 @@
 use super::piece_type::*;
-use super::notation::*;
+//use super::notation::*;
 use std::vec::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -63,7 +63,7 @@ pub fn calculate_positions(moves: Vec<String>) -> Vec<Position> {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
+    //use super::*;
 
     // #[test]
     // fn a_single_move() {
