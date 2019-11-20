@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.org/goofballLogic/narmi-chess.svg?branch=master)](https://travis-ci.org/goofballLogic/narmi-chess)
+goofballLogic master: [![Build Status](https://travis-ci.org/goofballLogic/narmi-chess.svg?branch=master)](https://travis-ci.org/goofballLogic/narmi-chess)
+aoshi master: ?
 
 ## tl;dr
 
