@@ -4,8 +4,8 @@ use super::end_of_game_type::*;
 #[derive(Debug, PartialEq)]
 pub struct Notation {
     text: String,
-    rank: Option<u8>,
-    file: Option<u8>,
+    to_rank: Option<u8>,
+    to_file: Option<u8>,
     piece_type: Option<PieceType>,
     capture: bool,
     from_file: Option<u8>,
@@ -27,7 +27,7 @@ impl Notation {
     fn validate_parsing(&self) {
 
         if !(self.queen_side_castle || self.king_side_castle || self.end_of_game.is_some()) {
-            match (self.rank, self.file) {
+            match (self.to_rank, self.to_file) {
                 (None, None) => { self.panic_invalid("Both rank and file are missing (or invalid)"); },
                 (None, _) => { self.panic_invalid("Rank is missing (or invalid)"); },
                 (_, None) => { self.panic_invalid("File is missing (or invalid)"); },
@@ -165,8 +165,8 @@ pub fn decode(notation: String) -> Notation {
 
     let mut parsed = Notation {
         text: "".to_string(), // assigned after parsing
-        rank: None,
-        file: None,
+        to_rank: None,
+        to_file: None,
         piece_type: None,
         capture: false,
         from_rank: None,
@@ -191,15 +191,15 @@ pub fn decode(notation: String) -> Notation {
         let (rank, file, ex_destination) = process_coordinates(ex_promotion);
         let (capture, ex_capture) = process_capture(ex_destination);
         let (piece_type, ex_piece_type) = process_piece_type(ex_capture);
-        let (source_rank, source_file, ex_source_coordinates) = process_coordinates(ex_piece_type);
-        match ex_source_coordinates {
+        let (from_rank, from_file, ex_from_coordinates) = process_coordinates(ex_piece_type);
+        match ex_from_coordinates {
             "" => {
-                parsed.rank = rank;
-                parsed.file = file;
+                parsed.to_rank = rank;
+                parsed.to_file = file;
                 parsed.piece_type = piece_type;
                 parsed.capture = capture;
-                parsed.from_rank = source_rank;
-                parsed.from_file = source_file;
+                parsed.from_rank = from_rank;
+                parsed.from_file = from_file;
                 parsed.check = check;
                 parsed.checkmate = checkmate;
                 parsed.enpassant = enpassant;
@@ -221,8 +221,8 @@ mod tests {
     fn test_decode(notation: &str, configure_expected: impl Fn(&mut Notation)) {
         let mut expected = Notation {
             text: notation.to_string(),
-            file: Some(0),
-            rank: Some(0),
+            to_file: Some(0),
+            to_rank: Some(0),
             piece_type: Some(PieceType::Pawn),
             capture: false,
             from_file: None,
@@ -247,8 +247,8 @@ mod tests {
         test_decode("0-0", |x| {
             x.king_side_castle = true;
             x.piece_type = None;
-            x.file = None;
-            x.rank = None;
+            x.to_file = None;
+            x.to_rank = None;
         });
     }
 
@@ -258,8 +258,8 @@ mod tests {
         test_decode("O-O", |x| {
             x.king_side_castle = true;
             x.piece_type = None;
-            x.file = None;
-            x.rank = None;
+            x.to_file = None;
+            x.to_rank = None;
         });
     }
 
@@ -268,8 +268,8 @@ mod tests {
         test_decode("0-0-0", |x| {
             x.queen_side_castle = true;
             x.piece_type = None;
-            x.file = None;
-            x.rank = None;
+            x.to_file = None;
+            x.to_rank = None;
         });
     }
 
@@ -279,8 +279,8 @@ mod tests {
         test_decode("O-O-O", |x| {
             x.queen_side_castle = true;
             x.piece_type = None;
-            x.file = None;
-            x.rank = None;
+            x.to_file = None;
+            x.to_rank = None;
         });
     }
 
@@ -295,8 +295,8 @@ mod tests {
         test_decode("1-0", |x| {
             x.end_of_game = Some(EndOfGameType::WhiteWin);
             x.piece_type = None;
-            x.rank = None;
-            x.file = None;
+            x.to_rank = None;
+            x.to_file = None;
         });
     }
 
@@ -305,8 +305,8 @@ mod tests {
         test_decode("0-1", |x| {
             x.end_of_game = Some(EndOfGameType::BlackWin);
             x.piece_type = None;
-            x.rank = None;
-            x.file = None;
+            x.to_rank = None;
+            x.to_file = None;
         });
     }
 
@@ -315,8 +315,8 @@ mod tests {
         test_decode("½–½", |x| {
             x.end_of_game = Some(EndOfGameType::Draw);
             x.piece_type = None;
-            x.rank = None;
-            x.file = None;
+            x.to_rank = None;
+            x.to_file = None;
         });
     }
 
@@ -337,7 +337,7 @@ mod tests {
     fn should_handle_enpassant_suffix() {
         test_decode("a2e.p.", |x| {
             x.enpassant = true;
-            x.rank = Some(1);
+            x.to_rank = Some(1);
         });
     }
 
@@ -346,8 +346,8 @@ mod tests {
     fn should_handle_promotion_suffix_PGN() {
         test_decode("e8=Q", |x| {
             x.promoted_to_piece_type = Some(PieceType::Queen);
-            x.file = Some(4);
-            x.rank = Some(7);
+            x.to_file = Some(4);
+            x.to_rank = Some(7);
         });
     }
 
@@ -356,24 +356,24 @@ mod tests {
     #[test]
     fn translate_rank_and_file() {
         test_decode("e4", |x| {
-            x.rank = Some(3);
-            x.file = Some(4);
+            x.to_rank = Some(3);
+            x.to_file = Some(4);
         });
     }
 
     #[test]
     fn translate_rank_and_file_upper_bounds() {
         test_decode("h8", |x| {
-            x.rank = Some(7);
-            x.file = Some(7);
+            x.to_rank = Some(7);
+            x.to_file = Some(7);
         });
     }
 
     #[test]
     fn translate_rank_and_file_lower_bounds() {
         test_decode("a1", |x| {
-            x.rank = Some(0);
-            x.file = Some(0);
+            x.to_rank = Some(0);
+            x.to_file = Some(0);
         });
     }
 
@@ -458,7 +458,7 @@ mod tests {
 
     // source rank and file
     #[test]
-    fn note_source_file() {
+    fn note_from_file() {
         test_decode("bRa1", |x| {
             x.piece_type = Some(PieceType::Rook);
             x.from_file = Some(1);
@@ -466,7 +466,7 @@ mod tests {
     }
 
     #[test]
-    fn note_source_rank() {
+    fn note_from_rank() {
         test_decode("2Ra1", |x| {
             x.piece_type = Some(PieceType::Rook);
             x.from_rank = Some(1);
@@ -474,7 +474,7 @@ mod tests {
     }
 
     #[test]
-    fn note_source_rank_and_file() {
+    fn note_from_rank_and_file() {
         test_decode("c2Qa1", |x| {
             x.piece_type = Some(PieceType::Queen);
             x.from_rank = Some(1);
@@ -484,19 +484,19 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Invalid notation: iRa1")]
-    fn invalid_source_rank() {
+    fn invalid_from_rank() {
         decode("iRa1".to_string());
     }
 
     #[test]
     #[should_panic(expected = "Invalid notation: 9Ra1")]
-    fn invalid_source_file() {
+    fn invalid_from_file() {
         decode("9Ra1".to_string());
     }
 
     #[test]
     #[should_panic(expected = "Invalid notation: i9Ra1")]
-    fn invalid_source_rank_and_invalid_source_file() {
+    fn invalid_from_rank_and_invalid_from_file() {
         decode("i9Ra1".to_string());
     }
 
