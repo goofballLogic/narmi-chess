@@ -1,3 +1,4 @@
+pub mod end_of_game_type;
 pub mod game;
 pub mod game_state;
 pub mod moving;

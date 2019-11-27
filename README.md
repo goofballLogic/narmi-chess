@@ -1,3 +1,9 @@
+CI builds:
+
+| aoshi:master | goofballLogic:master |
+| --- | --- |
+| ? | [![Build Status](https://travis-ci.org/goofballLogic/narmi-chess.svg?branch=master)](https://travis-ci.org/goofballLogic/narmi-chess) |
+
 ## tl;dr
 
 1. Install dependencies noted in https://rustwasm.github.io/book/game-of-life/introduction.html
