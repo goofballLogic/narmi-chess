@@ -11,10 +11,10 @@ fn validate_moves(moves: Vec<(u8, u8)>) -> Vec<(u8, u8)> {
     return valid_moves;
 }
 
-fn get_pawn_moves(start: (u8, u8), _is_white: bool) -> Vec<(u8, u8)> {
+fn get_pawn_moves(start: (u8, u8), is_white: bool) -> Vec<(u8, u8)> {
     let (m1, m2) = start;
     let mut possible_moves = [].to_vec();
-    if _is_white {
+    if is_white {
         if m1 > 0 {
             possible_moves.push((m1 + 1, m2));
             possible_moves.push((m1 + 1, m2 + 1));
@@ -40,9 +40,15 @@ fn get_pawn_moves(start: (u8, u8), _is_white: bool) -> Vec<(u8, u8)> {
     return validate_moves(possible_moves);
 }
 
-fn get_moves(_is_white: bool, start: (u8, u8), piece_type: PieceType) -> Vec<(u8, u8)> {
+pub fn get_moves(is_white: bool, start: (u8, u8), piece_type: PieceType) -> Vec<(u8, u8)> {
     match piece_type {
-        PieceType::Pawn => get_pawn_moves(start, _is_white),
+        PieceType::Pawn => get_pawn_moves(start, is_white),
+        PieceType::King => get_pawn_moves(start, is_white),
+        PieceType::Queen => get_pawn_moves(start, is_white),
+        PieceType::Rook => get_pawn_moves(start, is_white),
+        PieceType::Bishop => get_pawn_moves(start, is_white),
+        PieceType::Knight => get_pawn_moves(start, is_white),
+        PieceType::Empty => get_pawn_moves(start, is_white),
     }
 }
 
@@ -116,12 +122,12 @@ mod tests {
 
     #[test]
     fn black_pawn_can_capture_left() {
-        assert_move(false, PieceType::Pawn, (5, 5), (6, 4));
+        assert_move(false, PieceType::Pawn, (5, 5), (4, 4));
     }
 
     #[test]
     fn black_pawn_can_capture_right() {
-        assert_move(false, PieceType::Pawn, (5, 5), (6, 6));
+        assert_move(false, PieceType::Pawn, (5, 5), (4, 6));
     }
 
     // black_pawn_move_forward_one_blocked_by_edge_of_board is already impossible because rank is an unsigned integer (thus can't be -1)
