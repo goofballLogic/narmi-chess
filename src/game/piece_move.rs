@@ -106,6 +106,16 @@ mod tests {
     }
 
     #[test]
+    fn white_pawn_cant_move_backwards() {
+        assert_can_not_move(true, PieceType::Pawn, (1, 0), (0, 0));
+    }
+
+    #[test]
+    fn white_pawn_cant_capture_backwards() {
+        assert_can_not_move(true, PieceType::Pawn, (1, 0), (0, 1));
+    }
+
+    #[test]
     fn black_pawn_can_initially_move_forward_two() {
         assert_move(false, PieceType::Pawn, (6, 0), (4, 0));
     }
@@ -134,5 +144,35 @@ mod tests {
     #[test]
     fn black_pawn_capture_right_blocked_by_edge_of_board() {
         assert_can_not_move(false, PieceType::Pawn, (6, 7), (5, 8));
+    }
+
+    #[test]
+    fn black_pawn_cant_move_backwards() {
+        assert_can_not_move(false, PieceType::Pawn, (1, 0), (2, 0));
+    }
+
+    #[test]
+    fn black_pawn_cant_capture_backwards() {
+        assert_can_not_move(false, PieceType::Pawn, (1, 0), (2, 1));
+    }
+
+    #[test]
+    fn pawn_can_move_to_top_of_board() {
+        assert_move(true, PieceType::Pawn, (6, 0), (7, 0));
+    }
+
+    #[test]
+    fn pawn_can_move_to_bottom_of_board() {
+        assert_move(false, PieceType::Pawn, (1, 0), (0, 0));
+    }
+
+    #[test]
+    fn pawn_can_capture_to_left_edge_of_board() {
+        assert_move(true, PieceType::Pawn, (1, 1), (2, 0));
+    }
+
+    #[test]
+    fn pawn_can_capture_to_right_edge_of_board() {
+        assert_move(true, PieceType::Pawn, (1, 6), (2, 7));
     }
 }
