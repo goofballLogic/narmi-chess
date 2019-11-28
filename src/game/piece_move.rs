@@ -43,12 +43,7 @@ fn get_pawn_moves(start: (u8, u8), is_white: bool) -> Vec<(u8, u8)> {
 pub fn get_moves(is_white: bool, start: (u8, u8), piece_type: PieceType) -> Vec<(u8, u8)> {
     match piece_type {
         PieceType::Pawn => get_pawn_moves(start, is_white),
-        PieceType::King => get_pawn_moves(start, is_white),
-        PieceType::Queen => get_pawn_moves(start, is_white),
-        PieceType::Rook => get_pawn_moves(start, is_white),
-        PieceType::Bishop => get_pawn_moves(start, is_white),
-        PieceType::Knight => get_pawn_moves(start, is_white),
-        PieceType::Empty => get_pawn_moves(start, is_white),
+        _ => panic!("Not implemented yet"),
     }
 }
 
