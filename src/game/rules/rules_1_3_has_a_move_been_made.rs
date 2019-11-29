@@ -1,10 +1,8 @@
 /*
-1.2	The player with the light-coloured pieces (White) makes the first move,
-then the players move alternately, with the player with the dark-coloured pieces (Black) making the next move.
+1.3	A player is said to ‘have the move’ when his opponent’s move has been ‘made’.
 */
-
-use crate::game::game::*;
-use crate::game::moving::*;
+use crate::game::moving::MoveError;
+use crate::game::game::Game;
 use super::rule::Rule;
 
 pub struct Implementation {}
