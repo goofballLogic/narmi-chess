@@ -14,9 +14,3 @@ pub fn build_rules() -> Vec<Box<Rule>> {
         Box::new(rules_1_4_cant_move_after_check::Implementation::new())
     ]
 }
-
-// pub const VALIDATIONS: &[Validate] = &[
-//     rules_1_2_who_s_go_is_it::validate,
-    //&rules_1_3_has_a_move_been_made::Implementation::validate,
-    //&rules_1_4_cant_move_after_check::Implementation::validate
-//];
