@@ -1,9 +1,8 @@
 use super::game::*;
 
-//use super::rules::*;
-
+#[derive(Debug, PartialEq)]
 pub struct MoveError {
-    //reason: String
+    pub reason: String
 }
 
 // given a Game (containing moves), validates the next move and returns either the resulting Game or

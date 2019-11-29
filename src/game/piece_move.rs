@@ -4,7 +4,7 @@ fn validate_moves(moves: Vec<(u8, u8)>) -> Vec<(u8, u8)> {
     let mut valid_moves: Vec<(u8, u8)> = [].to_vec();
     for m in moves.iter() {
         let (m1, m2) = *m;
-        if (m1 > 1 && m1 < 8) && (m2 < 8) {
+        if m1 < 8 && m2 < 8 {
             valid_moves.push((m1, m2))
         }
     }
