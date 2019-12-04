@@ -8,6 +8,7 @@ the player is white.
 use super::rule::Rule;
 use crate::game::game::Game;
 use crate::game::moving::MoveError;
+use crate::game::notation::decode;
 
 pub struct Implementation {}
 
@@ -19,6 +20,7 @@ impl Implementation {
 
 impl Rule for Implementation {
     fn validate(&self, _: &Game, next_move: String) -> Result<(), MoveError> {
+        decode(next_move);
         Ok(())
     }
 }
