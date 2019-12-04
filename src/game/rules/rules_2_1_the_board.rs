@@ -20,8 +20,12 @@ impl Implementation {
 
 impl Rule for Implementation {
     fn validate(&self, _: &Game, next_move: String) -> Result<(), MoveError> {
-        decode(next_move);
-        Ok(())
+        match decode(next_move) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(MoveError {
+                reason: "Move is outside the confines of the chess board".to_string(),
+            }),
+        }
     }
 }
 
